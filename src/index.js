@@ -105,7 +105,7 @@ function getConfigurationResponse(callback) {
         speechOutput = "Welcome, now let's play some Twister!",
         shouldEndSession = false,
         currentTurn = 0,
-        repromptText = "To hear the next move say, spin, or, continue. When everyone is down, say, stop, or, game over";
+        repromptText = "To hear the next move say, spin, to enter a challenge round simply say, challenge, to end the game say, stop, or, game over";
     
     speechOutput += repromptText;
     sessionAttributes = {
