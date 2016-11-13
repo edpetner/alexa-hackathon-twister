@@ -90,6 +90,8 @@ function onIntent(intentRequest, session, callback) {
         handleRepeatRequest(intent, session, callback);
     } else if ("AMAZON.StopIntent" === intentName) {
         handleFinishSessionRequest(intent, session, callback);
+    } else if ("ChallengeRoundIntent" === intentName) {
+        handleChallengeRoundRequest(intent, session, callback);
     }
 }
 
@@ -115,6 +117,14 @@ function getConfigurationResponse(callback) {
         buildSpeechletResponse(CARD_TITLE, speechOutput, repromptText, shouldEndSession));
 }
 
+function populateMovesArray() {
+    var movesArray = [];
+    for (var i=0; i < 10; i++) {
+        movesArray.push(randomMove());
+    }
+    return movesArray;
+}
+
 function randomMove() {
     return MOVES[Math.floor(Math.random() * MOVES.length)];
 }
@@ -135,12 +145,33 @@ function handleAnswerRequest(intent, session, callback) {
         buildSpeechletResponse(CARD_TITLE, speechOutput, repromptText, false));
 }
 
+function handleChallengeRoundRequest(intent, session, callback) {
+    var sessionAttributes = {};
+    var movesArray = populateMovesArray();
+    var speechOutput = "<speak>I will now shoot off 10 moves, giving you seconds between each move."
+        + " If you all give up, simply say stop! Now I will begin, ";
+    for (var i=0; i<movesArray.length; i++) {
+        speechOutput += movesArray[i] + '<break time="1s"/>';
+    }
+    var currentTurn = parseInt(session.attributes.currentTurn) + 20;
+    speechOutput += ". If you're still up, say spin again, or challenge for more pain!</speak>";
+    var repromptText = "";
+    sessionAttributes = {
+        "currenTurn": currentTurn,
+        "speechOutput": speechOutput,
+        "repromptText": repromptText
+    };
+    callback(sessionAttributes,
+        buildSpeechletResponseWithoutCard(speechOutput, repromptText, false, true));
+
+}
+
 function handleRepeatRequest(intent, session, callback) {
     if (!session.attributes || !session.attributes.speechOutput) {
         getConfigurationResponse(callback);
     } else {
         callback(session.attributes,
-            buildSpeechletResponseWithoutCard(session.attributes.speechOutput, session.attributes.repromptText, false));
+            buildSpeechletResponseWithoutCard(session.attributes.speechOutput, session.attributes.repromptText, false, false));
     }
 }
 
@@ -151,12 +182,12 @@ function handleGetHelpRequest(intent, session, callback) {
         repromptText = "Good luck!";
     var shouldEndSession = false;
     callback(session.attributes,
-        buildSpeechletResponseWithoutCard(speechOutput, repromptText, shouldEndSession));
+        buildSpeechletResponseWithoutCard(speechOutput, repromptText, shouldEndSession, false));
 }
 
 function handleFinishSessionRequest(intent, session, callback) {
     callback(session.attributes,
-        buildSpeechletResponseWithoutCard("Thanks for playing Twister with me!", "", true));
+        buildSpeechletResponseWithoutCard("Thanks for playing Twister with me!", "", true, false));
 }
 
 /**
@@ -183,12 +214,21 @@ function buildSpeechletResponse(title, output, repromptText, shouldEndSession) {
     };
 }
 
-function buildSpeechletResponseWithoutCard(output, repromptText, shouldEndSession) {
-    return {
-        outputSpeech: {
+function buildSpeechletResponseWithoutCard(output, repromptText, shouldEndSession, ssmlBool) {
+    var outputS = {};
+    if (ssmlBool) {
+        outputS = {
+            type: "SSML",
+            ssml: output
+        };
+    } else {
+        outputS = {
             type: "PlainText",
             text: output
-        },
+        };
+    }
+    return {
+        outputSpeech: outputS,
         reprompt: {
             outputSpeech: {
                 type: "PlainText",
